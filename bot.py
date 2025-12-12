@@ -1,4 +1,4 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
 import json
 from datetime import datetime, timedelta
@@ -7,7 +7,7 @@ import re
 from typing import Dict, List
 
 # 🔐 Token robot
-TOKEN = "8531861676:AAGefz_InVL9y4FtKYcETGAFTRHggaJCnhA"  # Enter your token here
+TOKEN = "8531861676:AAGefz_InVL9y4FtKYcETGAFTRHggaJCnhA"
 
 # 📁 Database files
 EXPENSES_FILE = "expenses.json"
@@ -30,22 +30,43 @@ def save_data(filename, data):
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
-# ========== 🎨 Dropdown Menu System ==========
-class DropdownMenu:
+# ========== 🎨 Keyboard System ==========
+class KeyboardManager:
     
     @staticmethod
-    def main_menu() -> InlineKeyboardMarkup:
-        """Main dropdown menu"""
+    def get_main_keyboard():
+        """Main bottom keyboard (always visible)"""
         keyboard = [
-            [InlineKeyboardButton("➕ ثبت هزینه جدید", callback_data="add_expense")],
-            [InlineKeyboardButton("💰 ثبت درآمد جدید", callback_data="add_income")],
-            [InlineKeyboardButton("📊 گزارش‌ها و آمار", callback_data="reports")],
-            [InlineKeyboardButton("🎯 مدیریت بودجه‌ها", callback_data="budgets")],
-            [InlineKeyboardButton("📋 سرویس‌های من", callback_data="my_services")],
-            [InlineKeyboardButton("🛒 خرید سرویس", callback_data="buy_service")],
-            [InlineKeyboardButton("❓ راهنما و پشتیبانی", callback_data="help")]
+            [KeyboardButton("➕ ثبت هزینه"), KeyboardButton("💰 ثبت درآمد")],
+            [KeyboardButton("📊 گزارش‌ها"), KeyboardButton("🎯 بودجه‌ها")],
+            [KeyboardButton("📋 سرویس‌ها"), KeyboardButton("🛒 خرید سرویس")],
+            [KeyboardButton("❓ راهنما"), KeyboardButton("🏠 منوی اصلی")]
         ]
-        return InlineKeyboardMarkup(keyboard)
+        return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    
+    @staticmethod
+    def get_back_keyboard():
+        """Back button keyboard"""
+        keyboard = [[KeyboardButton("🔙 بازگشت")]]
+        return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    
+    @staticmethod
+    def get_cancel_keyboard():
+        """Cancel button keyboard"""
+        keyboard = [[KeyboardButton("❌ لغو")]]
+        return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    
+    @staticmethod
+    def get_quick_actions_keyboard():
+        """Quick actions keyboard"""
+        keyboard = [
+            [KeyboardButton("📊 گزارش امروز"), KeyboardButton("📝 هزینه جدید")],
+            [KeyboardButton("🎯 بودجه"), KeyboardButton("📋 سرویس")],
+            [KeyboardButton("🔙 بازگشت")]
+        ]
+        return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+class DropdownMenu:
     
     @staticmethod
     def categories_menu(selected=None) -> InlineKeyboardMarkup:
@@ -69,7 +90,7 @@ class DropdownMenu:
                 text = f"✅ {text}"
             keyboard.append([InlineKeyboardButton(text, callback_data=f"cat_{callback}")])
         
-        keyboard.append([InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="back_main")])
+        keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_main")])
         return InlineKeyboardMarkup(keyboard)
     
     @staticmethod
@@ -180,27 +201,8 @@ class DropdownMenu:
         """Back button menu"""
         keyboard = [[InlineKeyboardButton("🔙 بازگشت", callback_data=f"back_{return_to}")]]
         return InlineKeyboardMarkup(keyboard)
-    
-    @staticmethod
-    def period_menu() -> InlineKeyboardMarkup:
-        """Time period dropdown menu"""
-        keyboard = [
-            [
-                InlineKeyboardButton("روزانه", callback_data="period_daily"),
-                InlineKeyboardButton("هفتگی", callback_data="period_weekly")
-            ],
-            [
-                InlineKeyboardButton("ماهانه", callback_data="period_monthly"),
-                InlineKeyboardButton("سه‌ماهه", callback_data="period_quarterly")
-            ],
-            [
-                InlineKeyboardButton("سالانه", callback_data="period_yearly"),
-                InlineKeyboardButton("بازه دلخواه", callback_data="period_custom")
-            ],
-            [InlineKeyboardButton("🔙 بازگشت", callback_data="back_reports")]
-        ]
-        return InlineKeyboardMarkup(keyboard)
 
+keyboard_manager = KeyboardManager()
 menu = DropdownMenu()
 
 # ========== 📊 Expense Management System ==========
@@ -275,12 +277,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 • مدیریت بودجه
 • هشدارهای هوشمند
 
-📱 **از منوی زیر انتخاب کنید:**
+📱 **از کیبورد پایین انتخاب کنید:**
 """
+    
+    # Clear any previous data
+    context.user_data.clear()
     
     await update.message.reply_text(
         welcome_text,
-        reply_markup=menu.main_menu(),
+        reply_markup=keyboard_manager.get_main_keyboard(),
         parse_mode="Markdown"
     )
 
@@ -301,13 +306,12 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /buy - خرید سرویس جدید
 /help - نمایش این راهنما
 
-🔹 **پشتیبانی:**
-برای ارتباط با پشتیبانی از دکمه زیر استفاده کنید:
+برای بازگشت به منوی اصلی از دکمه 🔙 بازگشت استفاده کنید.
 """
     
     await update.message.reply_text(
         help_text,
-        reply_markup=menu.help_menu(),
+        reply_markup=keyboard_manager.get_back_keyboard(),
         parse_mode="Markdown"
     )
 
@@ -315,7 +319,6 @@ async def services_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     """Command /services"""
     user_id = str(update.effective_user.id)
     
-    # Simulate service data
     service_text = f"""
 📋 **سرویس‌های من**
 
@@ -328,11 +331,18 @@ async def services_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 • تاریخ انقضا: ۱۴۰۳/۱۲/۲۹
 • حجم مصرفی: ۲.۳ گیگ از ۱۰ گیگ
 
-🔹 **گزینه‌های مدیریت:**
+🔹 **برای مدیریت سرویس‌ها از دکمه‌های زیر استفاده کنید:**
 """
     
     await update.message.reply_text(
         service_text,
+        reply_markup=keyboard_manager.get_back_keyboard(),
+        parse_mode="Markdown"
+    )
+    
+    # نمایش منوی اینلاین برای جزئیات بیشتر
+    await update.message.reply_text(
+        "📋 **گزینه‌های مدیریت سرویس:**",
         reply_markup=menu.services_menu(),
         parse_mode="Markdown"
     )
@@ -358,13 +368,88 @@ async def buy_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 🎁 **تخفیف ویژه:**
 با کد `WELCOME10` از ۱۰٪ تخفیف بهره‌مند شوید!
-
-🔹 **لطفاً پلن مورد نظر را انتخاب کنید:**
 """
     
     await update.message.reply_text(
         buy_text,
+        reply_markup=keyboard_manager.get_back_keyboard(),
+        parse_mode="Markdown"
+    )
+    
+    # نمایش منوی اینلاین برای انتخاب پلن
+    await update.message.reply_text(
+        "🔹 **لطفاً پلن مورد نظر را انتخاب کنید:**",
         reply_markup=menu.buy_menu(),
+        parse_mode="Markdown"
+    )
+
+# ========== 🎯 Bottom Keyboard Handler ==========
+async def handle_keyboard_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handler for bottom keyboard buttons"""
+    text = update.message.text.strip()
+    user_id = str(update.effective_user.id)
+    
+    print(f"Keyboard button: {text} by user: {user_id}")
+    
+    # بررسی دکمه‌های کیبورد پایینی
+    if text == "➕ ثبت هزینه":
+        await start_add_expense(update)
+    
+    elif text == "💰 ثبت درآمد":
+        await update.message.reply_text(
+            "💰 **ثبت درآمد جدید**\n\nلطفاً مبلغ درآمد را انتخاب کنید:",
+            reply_markup=menu.amounts_menu(),
+            parse_mode="Markdown"
+        )
+    
+    elif text == "📊 گزارش‌ها":
+        await update.message.reply_text(
+            "📊 **گزارش‌ها و آمار**\n\nلطفاً نوع گزارش را انتخاب کنید:",
+            reply_markup=menu.reports_menu(),
+            parse_mode="Markdown"
+        )
+    
+    elif text == "🎯 بودجه‌ها":
+        await update.message.reply_text(
+            "🎯 **مدیریت بودجه‌ها**\n\nلطفاً عملیات مورد نظر را انتخاب کنید:",
+            reply_markup=menu.budgets_menu(),
+            parse_mode="Markdown"
+        )
+    
+    elif text == "📋 سرویس‌ها":
+        await services_command(update, context)
+    
+    elif text == "🛒 خرید سرویس":
+        await buy_command(update, context)
+    
+    elif text == "❓ راهنما":
+        await help_command(update, context)
+    
+    elif text == "🏠 منوی اصلی":
+        await start(update, context)
+    
+    elif text == "🔙 بازگشت":
+        await update.message.reply_text(
+            "به منوی اصلی بازگشتید.",
+            reply_markup=keyboard_manager.get_main_keyboard()
+        )
+    
+    elif text == "❌ لغو":
+        await update.message.reply_text(
+            "❌ عملیات لغو شد.",
+            reply_markup=keyboard_manager.get_main_keyboard()
+        )
+        context.user_data.clear()
+    
+    else:
+        # اگر پیام متنی بود و نه دکمه، به هندلر پیام‌های متنی برو
+        await handle_text_message(update, context)
+
+async def start_add_expense(update: Update):
+    """Start adding expense from keyboard"""
+    await update.message.reply_text(
+        "🏷️ **انتخاب دسته‌بندی**\n\nلطفاً دسته هزینه را انتخاب کنید:",
+        reply_markup=menu.categories_menu(),
         parse_mode="Markdown"
     )
 
@@ -380,7 +465,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     print(f"Button clicked: {data} by user: {user_id}")
     
     # 📌 Main handlers
-    if data == "add_expense":
+    if data == "add_expense" or data == "back_add":
         await show_category_menu(query, context)
     
     elif data == "add_income":
@@ -390,27 +475,27 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             parse_mode="Markdown"
         )
     
-    elif data == "reports":
+    elif data == "reports" or data == "back_reports":
         await query.edit_message_text(
             "📊 **گزارش‌ها و آمار**\n\nلطفاً نوع گزارش را انتخاب کنید:",
             reply_markup=menu.reports_menu(),
             parse_mode="Markdown"
         )
     
-    elif data == "budgets":
+    elif data == "budgets" or data == "back_budgets":
         await query.edit_message_text(
             "🎯 **مدیریت بودجه‌ها**\n\nلطفاً عملیات مورد نظر را انتخاب کنید:",
             reply_markup=menu.budgets_menu(),
             parse_mode="Markdown"
         )
     
-    elif data == "my_services":
+    elif data == "my_services" or data == "back_services":
         await services_command_callback(query)
     
-    elif data == "buy_service":
+    elif data == "buy_service" or data == "back_buy":
         await buy_command_callback(query)
     
-    elif data == "help":
+    elif data == "help" or data == "back_help":
         await help_command_callback(query)
     
     # 📌 Category handlers
@@ -457,6 +542,21 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     elif data == "export_data":
         await export_data(query, user_id)
+    
+    elif data == "confirm_yes":
+        await query.edit_message_text(
+            "✅ **خرید تایید شد!**\n\nدر حال انتقال به درگاه پرداخت...\n\n"
+            "پس از پرداخت، سرویس شما فعال خواهد شد.",
+            reply_markup=menu.back_menu("buy"),
+            parse_mode="Markdown"
+        )
+    
+    elif data == "confirm_no":
+        await query.edit_message_text(
+            "❌ **خرید لغو شد.**\n\nلطفاً پلن مورد نظر را انتخاب کنید:",
+            reply_markup=menu.buy_menu(),
+            parse_mode="Markdown"
+        )
 
 # ========== 🎯 Helper Functions for Handlers ==========
 async def show_category_menu(query, context):
@@ -487,8 +587,8 @@ async def handle_amount_selection(query, data, user_id, context):
         await query.edit_message_text(
             "✍️ **مبلغ دلخواه**\n\n"
             "لطفاً مبلغ را به عدد وارد کنید:\n"
-            "مثال: 15000 یا 50هزار",
-            reply_markup=menu.back_menu("add"),
+            "مثال: 15000 یا 50هزار\n\n"
+            "برای لغو از دکمه ❌ لغو استفاده کنید.",
             parse_mode="Markdown"
         )
         context.user_data["awaiting_custom_amount"] = True
@@ -503,8 +603,8 @@ async def handle_amount_selection(query, data, user_id, context):
     await query.edit_message_text(
         f"💰 **مبلغ انتخاب شد:** {amount:,} تومان\n\n"
         f"📝 لطفاً توضیحات هزینه را وارد کنید:\n"
-        f"(می‌توانید خالی بگذارید یا 'لغو' تایپ کنید)",
-        reply_markup=menu.back_menu("add"),
+        f"(می‌توانید خالی بگذارید یا 'لغو' تایپ کنید)\n\n"
+        f"برای لغو از دکمه ❌ لغو استفاده کنید.",
         parse_mode="Markdown"
     )
     
@@ -542,7 +642,10 @@ async def handle_report_selection(query, data, user_id):
     
     await query.edit_message_text(
         text,
-        reply_markup=menu.back_menu("reports"),
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("📊 گزارش‌های دیگر", callback_data="back_reports")],
+            [InlineKeyboardButton("🏠 منوی اصلی", callback_data="back_main")]
+        ]),
         parse_mode="Markdown"
     )
 
@@ -657,7 +760,7 @@ async def handle_help_selection(query, data):
 📖 **آموزش استفاده از ربات**
 
 🔹 **مراحل ثبت هزینه:**
-1. روی '➕ ثبت هزینه جدید' کلیک کنید
+1. روی '➕ ثبت هزینه' کلیک کنید
 2. دسته‌بندی را انتخاب کنید
 3. مبلغ را انتخاب یا وارد کنید
 4. توضیحات را وارد کنید (اختیاری)
@@ -676,16 +779,16 @@ async def handle_help_selection(query, data):
 ❓ **سوالات متداول**
 
 🔹 **چطور هزینه ثبت کنم؟**
-از منوی اصلی روی '➕ ثبت هزینه جدید' کلیک کنید.
+از دکمه '➕ ثبت هزینه' در کیبورد پایین استفاده کنید.
 
 🔹 **چطور گزارش بگیرم؟**
-از منوی اصلی روی '📊 گزارش‌ها و آمار' کلیک کنید.
+از دکمه '📊 گزارش‌ها' در کیبورد پایین استفاده کنید.
 
 🔹 **چطور بودجه تنظیم کنم؟**
-از منوی اصلی روی '🎯 مدیریت بودجه‌ها' کلیک کنید.
+از دکمه '🎯 بودجه‌ها' در کیبورد پایین استفاده کنید.
 
 🔹 **چطور با پشتیبانی تماس بگیرم؟**
-از دکمه '📞 تماس با پشتیبانی' استفاده کنید.
+از دکمه '❓ راهنما' و سپس '📞 تماس با پشتیبانی' استفاده کنید.
 """
     
     elif action == "contact":
@@ -752,6 +855,9 @@ async def handle_back_button(query, data):
     elif target == "help":
         await help_command_callback(query)
     
+    elif target == "buy":
+        await buy_command_callback(query)
+    
     else:
         await start_callback(query)
 
@@ -807,12 +913,12 @@ async def start_callback(query):
 سلام {user.first_name} 👋
 به ربات مدیریت هزینه خوش آمدید!
 
-📱 **از منوی زیر انتخاب کنید:**
+📱 **از کیبورد پایین انتخاب کنید:**
 """
     
     await query.edit_message_text(
         welcome_text,
-        reply_markup=menu.main_menu(),
+        reply_markup=keyboard_manager.get_main_keyboard(),
         parse_mode="Markdown"
     )
 
@@ -888,9 +994,11 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         if re.search(r'\d', text):
             await handle_quick_expense(update, text)
         else:
+            # اگر پیام متنی بود و دکمه کیبورد نبود، منو را نشان بده
             await update.message.reply_text(
-                "Please select from the menu below:",
-                reply_markup=menu.main_menu()
+                f"پیام شما: {text}\n\n"
+                f"لطفاً از کیبورد پایین برای انتخاب استفاده کنید:",
+                reply_markup=keyboard_manager.get_main_keyboard()
             )
 
 async def handle_expense_description(update: Update, context: ContextTypes.DEFAULT_TYPE, description: str):
@@ -898,7 +1006,7 @@ async def handle_expense_description(update: Update, context: ContextTypes.DEFAU
     if description.lower() in ["لغو", "cancel", "انصراف"]:
         await update.message.reply_text(
             "❌ عملیات ثبت هزینه لغو شد.",
-            reply_markup=menu.main_menu()
+            reply_markup=keyboard_manager.get_main_keyboard()
         )
         context.user_data.clear()
         return
@@ -910,7 +1018,7 @@ async def handle_expense_description(update: Update, context: ContextTypes.DEFAU
     if amount <= 0:
         await update.message.reply_text(
             "❌ خطا در ثبت هزینه. لطفاً مجدداً تلاش کنید.",
-            reply_markup=menu.main_menu()
+            reply_markup=keyboard_manager.get_main_keyboard()
         )
         context.user_data.clear()
         return
@@ -931,10 +1039,7 @@ async def handle_expense_description(update: Update, context: ContextTypes.DEFAU
         f"🏷️ دسته: {category_name}\n"
         f"📝 توضیحات: {description if description else 'بدون توضیح'}\n"
         f"🕐 زمان: {expense['time']}",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("📊 گزارش امروز", callback_data="report_today"),
-            InlineKeyboardButton("➕ هزینه جدید", callback_data="add_expense")
-        ]]),
+        reply_markup=keyboard_manager.get_main_keyboard(),
         parse_mode="Markdown"
     )
     
@@ -948,7 +1053,7 @@ async def handle_custom_amount(update: Update, context: ContextTypes.DEFAULT_TYP
     if not amount or amount <= 0:
         await update.message.reply_text(
             "❌ مبلغ نامعتبر! لطفاً عدد معتبر وارد کنید.\nمثال: 15000 یا 50هزار",
-            reply_markup=menu.back_menu("add")
+            reply_markup=keyboard_manager.get_cancel_keyboard()
         )
         return
     
@@ -958,8 +1063,9 @@ async def handle_custom_amount(update: Update, context: ContextTypes.DEFAULT_TYP
     
     await update.message.reply_text(
         f"💰 **مبلغ وارد شد:** {amount:,} تومان\n\n"
-        f"📝 لطفاً توضیحات هزینه را وارد کنید:",
-        reply_markup=menu.back_menu("add"),
+        f"📝 لطفاً توضیحات هزینه را وارد کنید:\n"
+        f"(می‌توانید خالی بگذارید یا از دکمه ❌ لغو استفاده کنید)",
+        reply_markup=keyboard_manager.get_cancel_keyboard(),
         parse_mode="Markdown"
     )
     
@@ -983,7 +1089,7 @@ async def handle_coupon_code(update: Update, context: ContextTypes.DEFAULT_TYPE,
         response = f"❌ **کد تخفیف نامعتبر!**\n\nکد '{coupon}' معتبر نیست.\n\nکدهای معتبر: WELCOME10, SAVE20\n\nلطفاً مجدداً کد را وارد کنید:"
         await update.message.reply_text(
             response,
-            reply_markup=menu.back_menu("buy"),
+            reply_markup=keyboard_manager.get_cancel_keyboard(),
             parse_mode="Markdown"
         )
         return  # Wait for new code
@@ -995,12 +1101,11 @@ async def handle_search_query(update: Update, context: ContextTypes.DEFAULT_TYPE
     query = text.strip()
     
     # Search operation should be done here
-    # For now, a sample message:
     await update.message.reply_text(
         f"🔍 **نتایج جستجو برای '{query}'**\n\n"
         f"(این بخش در حال توسعه است...)\n\n"
         f"⚠️ جستجوی پیشرفته به زودی اضافه خواهد شد.",
-        reply_markup=menu.back_menu("reports"),
+        reply_markup=keyboard_manager.get_main_keyboard(),
         parse_mode="Markdown"
     )
     
@@ -1036,10 +1141,7 @@ async def handle_quick_expense(update: Update, text: str):
         f"✅ **ثبت سریع موفق!**\n\n"
         f"💰 {amount:,} تومان - {description}\n"
         f"🕐 {expense['time']}",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("📊 گزارش امروز", callback_data="report_today"),
-            InlineKeyboardButton("🏠 منوی اصلی", callback_data="back_main")
-        ]]),
+        reply_markup=keyboard_manager.get_main_keyboard(),
         parse_mode="Markdown"
     )
 
@@ -1080,14 +1182,20 @@ def main() -> None:
     app.add_handler(CommandHandler("services", services_command))
     app.add_handler(CommandHandler("buy", buy_command))
     
+    # Bottom keyboard handler - must come before generic text handler
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_keyboard_button))
+    
     # Dropdown button handler
     app.add_handler(CallbackQueryHandler(button_handler))
     
-    # Text message handler
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message))
+    # Add error handler
+    async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        print(f"Error occurred: {context.error}")
     
-    print("🤖 Robot e modiriat e hazine ba menu haye keshide run shod...")
-    print("📱 Montazer e karbaran hastim...")
+    app.add_error_handler(error_handler)
+    
+    print("🤖 Expense management robot with bottom keyboard started...")
+    print("📱 Waiting for users...")
     
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 

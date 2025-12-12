@@ -6,17 +6,17 @@ import os
 import re
 from typing import Dict, List
 
-# 🔐 توکن ربات
-TOKEN = "8531861676:AAGefz_InVL9y4FtKYcETGAFTRHggaJCnhA"
+# 🔐 Token robot
+TOKEN = "8531861676:AAGefz_InVL9y4FtKYcETGAFTRHggaJCnhA"  # Enter your token here
 
-# 📁 فایل‌های دیتابیس
+# 📁 Database files
 EXPENSES_FILE = "expenses.json"
 USERS_FILE = "users.json"
 BUDGETS_FILE = "budgets.json"
 INCOMES_FILE = "incomes.json"
 CATEGORIES_FILE = "categories.json"
 
-# لود کردن داده‌ها
+# Load data
 def load_data(filename, default=None):
     if default is None:
         default = {} if not filename.endswith('.json') else []
@@ -30,12 +30,12 @@ def save_data(filename, data):
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
-# ========== 🎨 سیستم منوهای کشویی ==========
+# ========== 🎨 Dropdown Menu System ==========
 class DropdownMenu:
     
     @staticmethod
     def main_menu() -> InlineKeyboardMarkup:
-        """منوی اصلی کشویی"""
+        """Main dropdown menu"""
         keyboard = [
             [InlineKeyboardButton("➕ ثبت هزینه جدید", callback_data="add_expense")],
             [InlineKeyboardButton("💰 ثبت درآمد جدید", callback_data="add_income")],
@@ -49,7 +49,7 @@ class DropdownMenu:
     
     @staticmethod
     def categories_menu(selected=None) -> InlineKeyboardMarkup:
-        """منوی کشویی دسته‌بندی‌ها"""
+        """Categories dropdown menu"""
         categories = [
             ["🍔 غذا و رستوران", "food"],
             ["🚕 حمل و نقل", "transport"],
@@ -74,7 +74,7 @@ class DropdownMenu:
     
     @staticmethod
     def amounts_menu() -> InlineKeyboardMarkup:
-        """منوی کشویی مبالغ سریع"""
+        """Quick amounts dropdown menu"""
         amounts = [
             ["۵,۰۰۰ تومان", "5000"],
             ["۱۰,۰۰۰ تومان", "10000"],
@@ -100,7 +100,7 @@ class DropdownMenu:
     
     @staticmethod
     def reports_menu() -> InlineKeyboardMarkup:
-        """منوی کشویی گزارش‌ها"""
+        """Reports dropdown menu"""
         keyboard = [
             [InlineKeyboardButton("📅 گزارش امروز", callback_data="report_today")],
             [InlineKeyboardButton("📆 گزارش این هفته", callback_data="report_week")],
@@ -115,7 +115,7 @@ class DropdownMenu:
     
     @staticmethod
     def budgets_menu() -> InlineKeyboardMarkup:
-        """منوی کشویی مدیریت بودجه"""
+        """Budget management dropdown menu"""
         keyboard = [
             [InlineKeyboardButton("➕ ایجاد بودجه جدید", callback_data="budget_create")],
             [InlineKeyboardButton("📊 مشاهده بودجه‌ها", callback_data="budget_view")],
@@ -128,7 +128,7 @@ class DropdownMenu:
     
     @staticmethod
     def services_menu() -> InlineKeyboardMarkup:
-        """منوی کشویی سرویس‌ها"""
+        """Services dropdown menu"""
         keyboard = [
             [InlineKeyboardButton("🟢 سرویس فعال", callback_data="service_active")],
             [InlineKeyboardButton("⏳ تاریخ انقضا", callback_data="service_expiry")],
@@ -140,7 +140,7 @@ class DropdownMenu:
     
     @staticmethod
     def buy_menu() -> InlineKeyboardMarkup:
-        """منوی کشویی خرید"""
+        """Purchase dropdown menu"""
         keyboard = [
             [InlineKeyboardButton("💎 پلن طلایی - ۱ ماه", callback_data="buy_gold_1")],
             [InlineKeyboardButton("💎 پلن طلایی - ۳ ماه", callback_data="buy_gold_3")],
@@ -154,7 +154,7 @@ class DropdownMenu:
     
     @staticmethod
     def help_menu() -> InlineKeyboardMarkup:
-        """منوی کشویی راهنما"""
+        """Help dropdown menu"""
         keyboard = [
             [InlineKeyboardButton("📖 آموزش استفاده", callback_data="help_tutorial")],
             [InlineKeyboardButton("❓ سوالات متداول", callback_data="help_faq")],
@@ -166,7 +166,7 @@ class DropdownMenu:
     
     @staticmethod
     def confirm_menu() -> InlineKeyboardMarkup:
-        """منوی کشویی تایید/لغو"""
+        """Confirm/cancel dropdown menu"""
         keyboard = [
             [
                 InlineKeyboardButton("✅ تایید", callback_data="confirm_yes"),
@@ -177,13 +177,13 @@ class DropdownMenu:
     
     @staticmethod
     def back_menu(return_to: str = "main") -> InlineKeyboardMarkup:
-        """منوی بازگشت"""
+        """Back button menu"""
         keyboard = [[InlineKeyboardButton("🔙 بازگشت", callback_data=f"back_{return_to}")]]
         return InlineKeyboardMarkup(keyboard)
     
     @staticmethod
     def period_menu() -> InlineKeyboardMarkup:
-        """منوی کشویی بازه زمانی"""
+        """Time period dropdown menu"""
         keyboard = [
             [
                 InlineKeyboardButton("روزانه", callback_data="period_daily"),
@@ -203,12 +203,12 @@ class DropdownMenu:
 
 menu = DropdownMenu()
 
-# ========== 📊 سیستم مدیریت هزینه ==========
+# ========== 📊 Expense Management System ==========
 class ExpenseManager:
     
     @staticmethod
     def add_expense(user_id: str, amount: int, category: str, description: str = "") -> Dict:
-        """افزودن هزینه جدید"""
+        """Add new expense"""
         expense = {
             "id": str(datetime.now().timestamp()),
             "user_id": str(user_id),
@@ -228,7 +228,7 @@ class ExpenseManager:
     
     @staticmethod
     def get_today_expenses(user_id: str) -> List:
-        """دریافت هزینه‌های امروز"""
+        """Get today's expenses"""
         expenses = load_data(EXPENSES_FILE, [])
         today = datetime.now().strftime("%Y-%m-%d")
         
@@ -241,7 +241,7 @@ class ExpenseManager:
     
     @staticmethod
     def get_category_name(callback_data: str) -> str:
-        """تبدیل callback به نام فارسی دسته"""
+        """Convert callback to Persian category name"""
         category_map = {
             "food": "🍔 غذا و رستوران",
             "transport": "🚕 حمل و نقل",
@@ -258,9 +258,9 @@ class ExpenseManager:
         cat_key = callback_data.replace("cat_", "")
         return category_map.get(cat_key, "سایر")
 
-# ========== 🤖 دستورات اصلی ==========
+# ========== 🤖 Main Commands ==========
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """دستور /start"""
+    """Command /start"""
     user = update.effective_user
     
     welcome_text = f"""
@@ -285,7 +285,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """دستور /help"""
+    """Command /help"""
     help_text = """
 📞 **راهنمای اتصال به سرویس‌ها**
 
@@ -312,10 +312,10 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     )
 
 async def services_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """دستور /services"""
+    """Command /services"""
     user_id = str(update.effective_user.id)
     
-    # شبیه‌سازی داده‌های سرویس
+    # Simulate service data
     service_text = f"""
 📋 **سرویس‌های من**
 
@@ -338,7 +338,7 @@ async def services_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     )
 
 async def buy_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """دستور /buy"""
+    """Command /buy"""
     buy_text = """
 🛒 **خرید سرویس**
 
@@ -368,20 +368,20 @@ async def buy_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         parse_mode="Markdown"
     )
 
-# ========== 🎯 هندلرهای دکمه‌های کشویی ==========
+# ========== 🎯 Dropdown Button Handlers ==========
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """هندلر کلیه دکمه‌های کشویی"""
+    """Handler for all dropdown buttons"""
     query = update.callback_query
     await query.answer()
     
     data = query.data
     user_id = str(update.effective_user.id)
     
-    print(f"دکمه کلیک شد: {data} توسط کاربر: {user_id}")
+    print(f"Button clicked: {data} by user: {user_id}")
     
-    # 📌 هندلرهای اصلی
+    # 📌 Main handlers
     if data == "add_expense":
-        await show_category_menu(query)
+        await show_category_menu(query, context)
     
     elif data == "add_income":
         await query.edit_message_text(
@@ -413,39 +413,39 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     elif data == "help":
         await help_command_callback(query)
     
-    # 📌 هندلرهای دسته‌بندی
+    # 📌 Category handlers
     elif data.startswith("cat_"):
-        await handle_category_selection(query, data)
+        await handle_category_selection(query, data, context)
     
-    # 📌 هندلرهای مبلغ
+    # 📌 Amount handlers
     elif data.startswith("amount_"):
         await handle_amount_selection(query, data, user_id, context)
     
-    # 📌 هندلرهای گزارش
+    # 📌 Report handlers
     elif data.startswith("report_"):
         await handle_report_selection(query, data, user_id)
     
-    # 📌 هندلرهای بودجه
+    # 📌 Budget handlers
     elif data.startswith("budget_"):
         await handle_budget_selection(query, data, user_id)
     
-    # 📌 هندلرهای خرید
+    # 📌 Purchase handlers
     elif data.startswith("buy_"):
         await handle_buy_selection(query, data)
     
-    # 📌 هندلرهای سرویس
+    # 📌 Service handlers
     elif data.startswith("service_"):
         await handle_service_selection(query, data, user_id)
     
-    # 📌 هندلرهای راهنما
+    # 📌 Help handlers
     elif data.startswith("help_"):
         await handle_help_selection(query, data)
     
-    # 📌 هندلرهای بازگشت
+    # 📌 Back handlers
     elif data.startswith("back_"):
         await handle_back_button(query, data)
     
-    # 📌 سایر هندلرها
+    # 📌 Other handlers
     elif data == "restart":
         await start_callback(query)
     
@@ -458,21 +458,21 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     elif data == "export_data":
         await export_data(query, user_id)
 
-# ========== 🎯 توابع کمکی برای هندلرها ==========
-async def show_category_menu(query):
-    """نمایش منوی دسته‌بندی"""
+# ========== 🎯 Helper Functions for Handlers ==========
+async def show_category_menu(query, context):
+    """Show category menu"""
     await query.edit_message_text(
         "🏷️ **انتخاب دسته‌بندی**\n\nلطفاً دسته هزینه را انتخاب کنید:",
         reply_markup=menu.categories_menu(),
         parse_mode="Markdown"
     )
 
-async def handle_category_selection(query, data):
-    """هندلر انتخاب دسته‌بندی"""
+async def handle_category_selection(query, data, context):
+    """Category selection handler"""
     category_name = ExpenseManager.get_category_name(data)
     
-    # ذخیره دسته انتخاب شده در context
-    query.message.chat_data["selected_category"] = data.replace("cat_", "")
+    # Save selected category in context.user_data
+    context.user_data["selected_category"] = data.replace("cat_", "")
     
     await query.edit_message_text(
         f"✅ **دسته انتخاب شد:** {category_name}\n\n"
@@ -482,7 +482,7 @@ async def handle_category_selection(query, data):
     )
 
 async def handle_amount_selection(query, data, user_id, context):
-    """هندلر انتخاب مبلغ"""
+    """Amount selection handler"""
     if data == "amount_custom":
         await query.edit_message_text(
             "✍️ **مبلغ دلخواه**\n\n"
@@ -492,12 +492,13 @@ async def handle_amount_selection(query, data, user_id, context):
             parse_mode="Markdown"
         )
         context.user_data["awaiting_custom_amount"] = True
+        context.user_data["awaiting_amount_for"] = "expense"
         return
     
     amount = int(data.replace("amount_", ""))
     
-    # ذخیره مبلغ در context
-    query.message.chat_data["selected_amount"] = amount
+    # Save amount in context.user_data
+    context.user_data["selected_amount"] = amount
     
     await query.edit_message_text(
         f"💰 **مبلغ انتخاب شد:** {amount:,} تومان\n\n"
@@ -510,7 +511,7 @@ async def handle_amount_selection(query, data, user_id, context):
     context.user_data["awaiting_description"] = True
 
 async def handle_report_selection(query, data, user_id):
-    """هندلر انتخاب گزارش"""
+    """Report selection handler"""
     report_type = data.replace("report_", "")
     
     if report_type == "today":
@@ -546,7 +547,7 @@ async def handle_report_selection(query, data, user_id):
     )
 
 async def handle_budget_selection(query, data, user_id):
-    """هندلر انتخاب عملیات بودجه"""
+    """Budget operation selection handler"""
     action = data.replace("budget_", "")
     
     if action == "create":
@@ -574,7 +575,7 @@ async def handle_budget_selection(query, data, user_id):
         )
 
 async def handle_buy_selection(query, data):
-    """هندلر انتخاب پلن خرید"""
+    """Purchase plan selection handler"""
     plan = data.replace("buy_", "")
     
     plans = {
@@ -617,7 +618,7 @@ async def handle_buy_selection(query, data):
         )
 
 async def handle_service_selection(query, data, user_id):
-    """هندلر انتخاب سرویس"""
+    """Service selection handler"""
     action = data.replace("service_", "")
     
     if action == "active":
@@ -648,7 +649,7 @@ async def handle_service_selection(query, data, user_id):
     )
 
 async def handle_help_selection(query, data):
-    """هندلر انتخاب راهنما"""
+    """Help selection handler"""
     action = data.replace("help_", "")
     
     if action == "tutorial":
@@ -722,14 +723,14 @@ async def handle_help_selection(query, data):
     )
 
 async def handle_back_button(query, data):
-    """هندلر دکمه بازگشت"""
+    """Back button handler"""
     target = data.replace("back_", "")
     
     if target == "main":
         await start_callback(query)
     
     elif target == "add":
-        await show_category_menu(query)
+        await show_category_menu(query, None)
     
     elif target == "reports":
         await query.edit_message_text(
@@ -755,7 +756,7 @@ async def handle_back_button(query, data):
         await start_callback(query)
 
 async def apply_coupon(query, context):
-    """اعمال کد تخفیف"""
+    """Apply discount code"""
     await query.edit_message_text(
         "🎁 **اعمال کد تخفیف**\n\n"
         "لطفاً کد تخفیف خود را وارد کنید:\n\n"
@@ -771,7 +772,7 @@ async def apply_coupon(query, context):
     context.user_data["awaiting_coupon"] = True
 
 async def search_expenses(query, context):
-    """جستجو در هزینه‌ها"""
+    """Search in expenses"""
     await query.edit_message_text(
         "🔍 **جستجو در هزینه‌ها**\n\n"
         "لطفاً عبارت جستجو را وارد کنید:\n"
@@ -783,7 +784,7 @@ async def search_expenses(query, context):
     context.user_data["awaiting_search"] = True
 
 async def export_data(query, user_id):
-    """خروجی گرفتن از داده‌ها"""
+    """Export data"""
     await query.edit_message_text(
         "📤 **خروجی گرفتن از داده‌ها**\n\n"
         "در حال آماده‌سازی گزارش...\n\n"
@@ -796,9 +797,9 @@ async def export_data(query, user_id):
         parse_mode="Markdown"
     )
 
-# ========== 🔄 توابع کمکی ==========
+# ========== 🔄 Helper Functions ==========
 async def start_callback(query):
-    """شروع ربات از طریق callback"""
+    """Start robot through callback"""
     user = query.from_user
     welcome_text = f"""
 🤖 **ربات مدیریت هوشمند هزینه‌ها**
@@ -816,7 +817,7 @@ async def start_callback(query):
     )
 
 async def services_command_callback(query):
-    """سرویس‌ها از طریق callback"""
+    """Services through callback"""
     user = query.from_user
     service_text = f"""
 📋 **سرویس‌های من**
@@ -834,7 +835,7 @@ async def services_command_callback(query):
     )
 
 async def buy_command_callback(query):
-    """خرید از طریق callback"""
+    """Purchase through callback"""
     buy_text = """
 🛒 **خرید سرویس**
 
@@ -850,7 +851,7 @@ async def buy_command_callback(query):
     )
 
 async def help_command_callback(query):
-    """راهنما از طریق callback"""
+    """Help through callback"""
     help_text = """
 ❓ **راهنما و پشتیبانی**
 
@@ -863,13 +864,13 @@ async def help_command_callback(query):
         parse_mode="Markdown"
     )
 
-# ========== 💬 هندلر پیام‌های متنی ==========
+# ========== 💬 Text Message Handler ==========
 async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """هندلر پیام‌های متنی"""
+    """Text message handler"""
     text = update.message.text.strip()
     user_id = str(update.effective_user.id)
     
-    # بررسی وضعیت‌های مختلف
+    # Check different states
     if context.user_data.get("awaiting_description"):
         await handle_expense_description(update, context, text)
     
@@ -883,37 +884,38 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         await handle_search_query(update, context, text)
     
     else:
-        # ثبت سریع هزینه با متن ساده
+        # Quick expense registration with simple text
         if re.search(r'\d', text):
             await handle_quick_expense(update, text)
         else:
             await update.message.reply_text(
-                "لطفاً از منوی زیر انتخاب کنید:",
+                "Please select from the menu below:",
                 reply_markup=menu.main_menu()
             )
 
 async def handle_expense_description(update: Update, context: ContextTypes.DEFAULT_TYPE, description: str):
-    """هندلر توضیحات هزینه"""
+    """Expense description handler"""
     if description.lower() in ["لغو", "cancel", "انصراف"]:
         await update.message.reply_text(
             "❌ عملیات ثبت هزینه لغو شد.",
             reply_markup=menu.main_menu()
         )
-        context.user_data.pop("awaiting_description", None)
+        context.user_data.clear()
         return
     
-    # گرفتن داده‌های ذخیره شده
-    amount = update.message.chat_data.get("selected_amount", 0)
-    category = update.message.chat_data.get("selected_category", "food")
+    # Get saved data from context.user_data
+    amount = context.user_data.get("selected_amount", 0)
+    category = context.user_data.get("selected_category", "food")
     
     if amount <= 0:
         await update.message.reply_text(
             "❌ خطا در ثبت هزینه. لطفاً مجدداً تلاش کنید.",
             reply_markup=menu.main_menu()
         )
+        context.user_data.clear()
         return
     
-    # ثبت هزینه
+    # Register expense
     category_name = ExpenseManager.get_category_name(f"cat_{category}")
     expense = ExpenseManager.add_expense(
         user_id=update.effective_user.id,
@@ -922,7 +924,7 @@ async def handle_expense_description(update: Update, context: ContextTypes.DEFAU
         description=description
     )
     
-    # پاسخ به کاربر
+    # Response to user
     await update.message.reply_text(
         f"✅ **هزینه با موفقیت ثبت شد!**\n\n"
         f"💰 مبلغ: {amount:,} تومان\n"
@@ -936,13 +938,11 @@ async def handle_expense_description(update: Update, context: ContextTypes.DEFAU
         parse_mode="Markdown"
     )
     
-    # پاک کردن داده‌های موقت
-    context.user_data.pop("awaiting_description", None)
-    update.message.chat_data.pop("selected_amount", None)
-    update.message.chat_data.pop("selected_category", None)
+    # Clear temporary data
+    context.user_data.clear()
 
 async def handle_custom_amount(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str):
-    """هندلر مبلغ دلخواه"""
+    """Custom amount handler"""
     amount = parse_amount(text)
     
     if not amount or amount <= 0:
@@ -952,8 +952,8 @@ async def handle_custom_amount(update: Update, context: ContextTypes.DEFAULT_TYP
         )
         return
     
-    # ذخیره مبلغ و رفتن به مرحله بعد
-    update.message.chat_data["selected_amount"] = amount
+    # Save amount and go to next step
+    context.user_data["selected_amount"] = amount
     context.user_data.pop("awaiting_custom_amount", None)
     
     await update.message.reply_text(
@@ -966,10 +966,10 @@ async def handle_custom_amount(update: Update, context: ContextTypes.DEFAULT_TYP
     context.user_data["awaiting_description"] = True
 
 async def handle_coupon_code(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str):
-    """هندلر کد تخفیف"""
+    """Discount code handler"""
     coupon = text.strip().upper()
     
-    # بررسی اعتبار کد
+    # Check code validity
     valid_coupons = ["WELCOME10", "SAVE20", "FIRSTBUY", "TEST123"]
     
     if coupon in valid_coupons:
@@ -986,16 +986,16 @@ async def handle_coupon_code(update: Update, context: ContextTypes.DEFAULT_TYPE,
             reply_markup=menu.back_menu("buy"),
             parse_mode="Markdown"
         )
-        return  # منتظر کد جدید بمان
+        return  # Wait for new code
     
     context.user_data.pop("awaiting_coupon", None)
 
 async def handle_search_query(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str):
-    """هندلر جستجو"""
+    """Search query handler"""
     query = text.strip()
     
-    # در اینجا باید عملیات جستجو انجام شود
-    # فعلاً یک پیام نمونه:
+    # Search operation should be done here
+    # For now, a sample message:
     await update.message.reply_text(
         f"🔍 **نتایج جستجو برای '{query}'**\n\n"
         f"(این بخش در حال توسعه است...)\n\n"
@@ -1007,8 +1007,8 @@ async def handle_search_query(update: Update, context: ContextTypes.DEFAULT_TYPE
     context.user_data.pop("awaiting_search", None)
 
 async def handle_quick_expense(update: Update, text: str):
-    """ثبت سریع هزینه"""
-    # پیدا کردن عدد در متن
+    """Quick expense registration"""
+    # Find number in text
     numbers = re.findall(r'[\d,]+', text)
     if not numbers:
         return
@@ -1021,10 +1021,10 @@ async def handle_quick_expense(update: Update, text: str):
     if not description:
         description = "بدون توضیح"
     
-    # تشخیص دسته ساده
-    category = "food"  # پیش‌فرض
+    # Simple category detection
+    category = "food"  # Default
     
-    # ثبت هزینه
+    # Register expense
     expense = ExpenseManager.add_expense(
         user_id=update.effective_user.id,
         amount=amount,
@@ -1044,7 +1044,7 @@ async def handle_quick_expense(update: Update, text: str):
     )
 
 def parse_amount(amount_str):
-    """تبدیل مبلغ به عدد"""
+    """Convert amount to number"""
     try:
         amount_str = str(amount_str)
         amount_str = amount_str.replace(",", "").replace(" ", "")
@@ -1069,25 +1069,25 @@ def parse_amount(amount_str):
     except:
         return None
 
-# ========== 🚀 اجرای اصلی ربات ==========
+# ========== 🚀 Main Robot Execution ==========
 def main() -> None:
-    """شروع ربات"""
+    """Start robot"""
     app = Application.builder().token(TOKEN).build()
     
-    # دستورات اصلی
+    # Main commands
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("services", services_command))
     app.add_handler(CommandHandler("buy", buy_command))
     
-    # هندلر دکمه‌های کشویی
+    # Dropdown button handler
     app.add_handler(CallbackQueryHandler(button_handler))
     
-    # هندلر پیام‌های متنی
+    # Text message handler
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message))
     
-    print("🤖 ربات مدیریت هزینه با منوهای کشویی راه‌اندازی شد...")
-    print("📱 منتظر کاربران هستیم...")
+    print("🤖 Robot e modiriat e hazine ba menu haye keshide run shod...")
+    print("📱 Montazer e karbaran hastim...")
     
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 

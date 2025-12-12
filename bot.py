@@ -12,7 +12,7 @@ from collections import defaultdict
 import random
 
 # 🔐 Token robot
-TOKEN = "8531861676:AAGefz_InVL9y4FtKYcETGAFTRHggaJCnhA"
+TOKEN = "توکنی که از تلگرام گرفته اید رو اینجا وارد کنید"
 
 # 📁 Database files
 EXPENSES_FILE = "expenses.json"
